@@ -1,9 +1,11 @@
 buildscript {
     dependencies {
         classpath 'org.hibernate.build.gradle:gradle-maven-publish-auth:2.0.1'
+        classpath 'net.researchgate:gradle-release:2.8.1'
     }
     repositories {
         mavenCentral()
+        jcenter()
     }
 }
 
@@ -16,6 +18,7 @@ subprojects {
     apply plugin: 'maven-publish'
     apply plugin: 'maven-publish-auth'
     apply plugin: "maven"
+    apply plugin: 'net.researchgate.release'
 
     repositories {
         mavenCentral()
@@ -36,7 +39,7 @@ subprojects {
         jetVersion = '3.0'
         hazelcastVersion = '3.12'
     }
-    
+
     dependencies {
         compile group: 'com.hazelcast.jet', name: 'hazelcast-jet', version: jetVersion
         compile group: 'com.google.code.findbugs', name: 'jsr305', version: '3.0.2'
@@ -89,6 +92,32 @@ subprojects {
     }
 
     build.dependsOn javadoc
+
+    release {
+        failOnCommitNeeded = false
+        failOnPublishNeeded = false
+        failOnSnapshotDependencies = true
+        failOnUnversionedFiles = true
+        failOnUpdateNeeded = false
+        pushReleaseVersionBranch = '0.1'
+
+        tagTemplate = '$version'
+        preTagCommitMessage = ''
+        tagCommitMessage = ''
+        newVersionCommitMessage = ''
+        scmAdapters = [
+                net.researchgate.release.GitAdapter,
+        ]
+        git {
+            requireBranch = 'master'
+            pushToRemote = 'emin'
+            pushToBranchPrefix = ''
+            commitVersionFileOnly = false
+            signTag = false
+        }
+
+    }
+
 
 }
 
