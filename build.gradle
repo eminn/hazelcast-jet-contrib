@@ -102,10 +102,10 @@ subprojects {
         failOnUpdateNeeded = true
         revertOnFail = true
         preCommitText = ''
-        preTagCommitMessage = ''
-        tagCommitMessage = ''
-        newVersionCommitMessage = ''
-        tagTemplate = '${version}'
+        preTagCommitMessage = '${name}-'
+        tagCommitMessage = '${name}-'
+        newVersionCommitMessage = '${name}-'
+        tagTemplate = '${name}-${version}'
         pushReleaseVersionBranch = false
         scmAdapters = [
                 net.researchgate.release.GitAdapter,
