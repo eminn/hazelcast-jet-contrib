@@ -120,6 +120,9 @@ subprojects {
         }
     }
 
+    afterReleaseBuild.dependsOn publishToMavenLocal
+
+
 
 }
 
