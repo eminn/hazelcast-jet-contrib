@@ -1,9 +1,12 @@
 buildscript {
     dependencies {
         classpath 'org.hibernate.build.gradle:gradle-maven-publish-auth:2.0.1'
+        classpath 'net.researchgate:gradle-release:2.8.1'
+
     }
     repositories {
         mavenCentral()
+        jcenter()
     }
 }
 
@@ -16,6 +19,7 @@ subprojects {
     apply plugin: 'maven-publish'
     apply plugin: 'maven-publish-auth'
     apply plugin: "maven"
+    apply plugin: 'net.researchgate.release'
 
     repositories {
         mavenCentral()
@@ -89,6 +93,33 @@ subprojects {
     }
 
     build.dependsOn javadoc
+
+    release {
+        failOnCommitNeeded = true
+        failOnPublishNeeded = true
+        failOnSnapshotDependencies = true
+        failOnUnversionedFiles = true
+        failOnUpdateNeeded = true
+        revertOnFail = true
+        preCommitText = ''
+        preTagCommitMessage = ''
+        tagCommitMessage = ''
+        newVersionCommitMessage = ''
+        tagTemplate = '${version}'
+        pushReleaseVersionBranch = false
+        scmAdapters = [
+                net.researchgate.release.GitAdapter,
+        ]
+
+        git {
+            requireBranch = 'master'
+            pushToRemote = 'origin'
+            pushToBranchPrefix = ''
+            commitVersionFileOnly = false
+            signTag = false
+        }
+    }
+
 
 }
 
