@@ -106,7 +106,6 @@ subprojects {
         tagCommitMessage = ''
         newVersionCommitMessage = ''
         tagTemplate = '${name}-${version}'
-        versionPropertyFile = 'build.gradle'
         pushReleaseVersionBranch = false
         scmAdapters = [
                 net.researchgate.release.GitAdapter,
