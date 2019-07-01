@@ -102,9 +102,9 @@ subprojects {
         failOnUpdateNeeded = true
         revertOnFail = true
         preCommitText = ''
-        preTagCommitMessage = '${name}-'
-        tagCommitMessage = '${name}-'
-        newVersionCommitMessage = '${name}-'
+        preTagCommitMessage = ''
+        tagCommitMessage = ''
+        newVersionCommitMessage = ''
         tagTemplate = '${name}-${version}'
         pushReleaseVersionBranch = false
         scmAdapters = [
