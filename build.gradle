@@ -19,6 +19,7 @@ subprojects {
     apply plugin: 'maven-publish'
     apply plugin: 'maven-publish-auth'
     apply plugin: "maven"
+    apply plugin: 'signing'
     apply plugin: 'net.researchgate.release'
 
     repositories {
@@ -78,8 +79,12 @@ subprojects {
         }
         repositories {
             maven {
-                name "snapshot-repository"
-                url "https://oss.sonatype.org/content/repositories/snapshots"
+                def snapshotsRepoName = "snapshot-repository"
+                def snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots"
+                def releasesRepoName = "release-repository"
+                def releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2"
+                name = version.endsWith('SNAPSHOT') ? snapshotsRepoName : releasesRepoName
+                url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
             }
             mavenLocal()
         }
@@ -90,6 +95,10 @@ subprojects {
             options.addBooleanOption('html5', true)
         }
         options.addStringOption('Xdoclint:none', '-quiet')
+    }
+
+    signing {
+        sign publishing.publications.mavenJava
     }
 
     build.dependsOn javadoc
