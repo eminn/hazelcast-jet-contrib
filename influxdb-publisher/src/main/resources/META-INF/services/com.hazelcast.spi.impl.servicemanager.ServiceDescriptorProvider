@@ -1,0 +1,1 @@
+com.hazelcast.jet.contrib.influxdb.publisher.InfluxDbMetricsPublisherService$InfluxDbMetricsPublisherServiceDescriptorProvider
