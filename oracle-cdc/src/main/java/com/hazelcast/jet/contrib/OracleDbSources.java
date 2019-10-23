@@ -13,6 +13,7 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
@@ -75,7 +76,7 @@ public final class OracleDbSources {
     private static class OracleDBContext {
         private static final ILogger LOGGER = Logger.getLogger(OracleDBContext.class);
         private Connection connection;
-        private Map<String, String> offsetMap;
+        private Map<String, String> offsetMap = new HashMap<>(3);
         private final String hostname;
         private final String port;
         private final String name;
@@ -83,6 +84,7 @@ public final class OracleDbSources {
         private final int fetchSize;
         private final String user;
         private final String pass;
+        private final String tableWhitelist;
         private final String startScn;
         private final boolean resetOffset;
         private volatile boolean logMinerSessionStarted = false;
@@ -102,9 +104,10 @@ public final class OracleDbSources {
             fetchSize = Integer.parseInt(properties.getProperty(DB_FETCH_SIZE, "100"));
             user = properties.getProperty(DB_USER_PROPERTY);
             pass = properties.getProperty(DB_PASSWORD_PROPERTY);
+            tableWhitelist = properties.getProperty(TABLE_WHITELIST);
             startScn = properties.getProperty(START_SCN);
             resetOffset = Boolean.parseBoolean(properties.getProperty(RESET_OFFSET));
-            LOGGER.info("Starting the Oracle DB connection to " + alias + "database.");
+            LOGGER.info("Starting the Oracle DB connection to " + alias + " database.");
             connection = getConnection();
         }
 
@@ -156,19 +159,50 @@ public final class OracleDbSources {
             logMinerStartStatement.setLong(1, offsetScn);
             logMinerStartStatement.executeQuery();
             LOGGER.info("LogMiner Session started, executing the SELECT statement");
-            logMinerSelectStatement = connection.prepareCall(LOGMINER_SELECT_WITH_SCHEMA_SQL);
+            logMinerSelectStatement = connection.prepareCall(getSelectLogMinerQuery());
             logMinerSelectStatement.setLong(1, commitScn);
             logMinerSelectStatement.setFetchSize(fetchSize);
             logMinerSelectResultSet = logMinerSelectStatement.executeQuery();
         }
 
+        private String getSelectLogMinerQuery() {
+            StringBuilder builder = new StringBuilder();
+            builder.append(LOGMINER_SELECT_WITH_SCHEMA_SQL);
+            builder.append("(");
+            for (String table : tableWhitelist.split(",")) {
+                String[] tables = table.split("\\.");
+                builder.append("(");
+                builder.append(SEG_OWNER_FIELD);
+                builder.append("='");
+                builder.append(tables[0]);
+                builder.append("'");
+                if (!tables[1].equals("*")) {
+                    builder.append(" and ");
+                    builder.append(TABLE_NAME_FIELD);
+                    builder.append("='");
+                    builder.append(tables[1]);
+                    builder.append("'");
+                }
+                builder.append(") or ");
+            }
+            builder.delete(builder.length() - 4, builder.length());
+            builder.append(")");
+            return builder.toString();
+        }
+
         void stop() throws SQLException {
-            logMinerSelectStatement.cancel();
-            logMinerSelectStatement.close();
-            logMinerStartStatement.cancel();
-            logMinerStartStatement.close();
-            connection.prepareCall(STOP_LOGMINER_SQL).executeQuery();
-            connection.close();
+            if (logMinerSelectStatement != null) {
+                logMinerSelectStatement.cancel();
+                logMinerSelectStatement.close();
+            }
+            if (logMinerStartStatement != null) {
+                logMinerStartStatement.cancel();
+                logMinerStartStatement.close();
+            }
+            if (connection != null) {
+                connection.prepareCall(STOP_LOGMINER_SQL).executeQuery();
+                connection.close();
+            }
         }
 
 
@@ -177,8 +211,7 @@ public final class OracleDbSources {
                 startLogMinerSession();
                 logMinerSessionStarted = true;
             }
-            int count = 0;
-            while (logMinerSelectResultSet.next() && count < fetchSize) {
+            while (logMinerSelectResultSet.next()) {
                 long scn = logMinerSelectResultSet.getLong(SCN_FIELD);
                 long commitScn = logMinerSelectResultSet.getLong(COMMIT_SCN_FIELD);
                 String rowId = logMinerSelectResultSet.getString(ROW_ID_FIELD);
@@ -198,8 +231,15 @@ public final class OracleDbSources {
                 }
                 Timestamp timestamp = logMinerSelectResultSet.getTimestamp(TIMESTAMP_FIELD);
                 String operation = logMinerSelectResultSet.getString(OPERATION_FIELD);
-                count++;
-                CDCRecord record = parseSqlCreateRecord(sqlRedo.toString());
+                String sqlRedoString = sqlRedo.toString();
+                CDCRecord record = parseSqlCreateRecord(sqlRedoString);
+                record.setScn(scn);
+                record.setOperation(operation);
+                record.setSegName(segName);
+                record.setSegOwner(segOwner);
+                record.setSqlRedo(sqlRedoString);
+                record.setTimestamp(timestamp);
+                System.out.println("record = " + record);
                 buffer.add(record);
             }
         }
